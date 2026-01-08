@@ -1,11 +1,14 @@
 import {
   pgTable,
-  serial,
+  uuid,
   integer,
   date,
   doublePrecision,
   uniqueIndex,
+  check,
+  timestamp,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { users } from './users';
 
 // ----------------------------------------------------------------------
@@ -14,8 +17,8 @@ import { users } from './users';
 export const dailyLogs = pgTable(
   'daily_logs',
   {
-    id: serial('id').primaryKey(),
-    userId: integer('user_id')
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
       .references(() => users.id)
       .notNull(),
     date: date('date').notNull(), // Stores '2025-01-01'
@@ -27,6 +30,8 @@ export const dailyLogs = pgTable(
 
     // Metadata
     streakCount: integer('streak_count').default(0), // Snapshot of streak at this date
+
+    updatedAt: timestamp('updated_at').defaultNow(),
   },
   (table) => {
     return {
@@ -35,6 +40,10 @@ export const dailyLogs = pgTable(
         table.userId,
         table.date,
       ),
+      waterCheck: check('water_check', sql`${table.waterIntakeMl} >= 0`),
+      caloriesCheck: check('calories_check', sql`${table.caloriesBurned} >= 0`),
+      distanceCheck: check('distance_check', sql`${table.distanceKm} >= 0`),
+      streakCheck: check('streak_check', sql`${table.streakCount} >= 0`),
     };
   },
 );
